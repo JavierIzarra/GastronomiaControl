@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GastroControl AI - Control de Inventario y Menú</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <!-- PDF.js para lectura de documentos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+    <!-- Firebase SDKs (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+    <header>
+        <h1>🍽️ GastroControl AI</h1>
+        <p>Sistema Inteligente con Control de Stock, Escandallo y Menú Editable</p>
+    </header>
+
+    <main class="container">
+        <!-- DASHBOARD / TABLERO DE CONTROL FINANCIERO -->
+        <section class="card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border: none;">
+            <h2 style="color: white; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">📊 Dashboard Financiero y Control</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                
+                <div style="background: rgba(255,255,255,0.07); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                    <small style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">Valor del Stock</small>
+                    <div id="stat-valor-stock" style="font-size: 1.6rem; font-weight: 800; margin-top: 6px; color: #38bdf8;">$0.00</div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.07); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                    <small style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">Pérdida por Mermas</small>
+                    <div id="stat-perdida-mermas" style="font-size: 1.6rem; font-weight: 800; margin-top: 6px; color: #f87171;">$0.00</div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.07); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                    <small style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">Margen Promedio Menú</small>
+                    <div id="stat-margen-menu" style="font-size: 1.6rem; font-weight: 800; margin-top: 6px; color: #34d399;">0%</div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.07); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                    <small style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">Insumos con Stock Bajo</small>
+                    <div id="stat-stock-bajo" style="font-size: 1.6rem; font-weight: 800; margin-top: 6px; color: #fbbf24;">0</div>
+                </div>
+
+            </div>
+        </section>
+        
+        <!-- MÓDULO INTELIGENTE: ESCANEO DE FACTURAS -->
+        <section class="card ocr-section">
+            <h2>📸 Carga Automática por Escaneo de Factura</h2>
+            <p>Sube tu factura de proveedor o procesa los datos limpios:</p>
+            
+            <div class="ocr-box">
+                <input type="file" id="factura-file" accept=".pdf,.txt,.png,.jpg">
+                <button type="button" class="btn-ocr-demo" onclick="simularEscaneoFacturaCarnePanJamonQueso()">⚡ Cargar Factura (Códigos y Precios)</button>
+            </div>
+            
+            <div id="ocr-status" class="ocr-status"></div>
+            <div id="ocr-resultado" class="ocr-resultado"></div>
+        </section>
+
+         <!-- SECCIÓN 1: INVENTARIO Y CÓDIGOS INTERNOS -->
+          <!-- SECCIÓN DE MERMAS Y DESPERDICIOS -->
+        <section class="card" style="border-left: 5px solid var(--danger);">
+            <h2>🗑️ Registro de Mermas y Desperdicios</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">
+                Registra la mercadería descartada por vencimiento, rotura o mal estado para ajustar el stock y medir pérdidas monetarias:
+            </p>
+
+            <form id="form-merma">
+                <select id="select-ingrediente-merma" required style="padding: 12px; border: 1px solid var(--border); border-radius: 10px; flex: 2; min-width: 180px; background-color: #f8fafc;">
+                    <option value="">-- Seleccionar Insumo --</option>
+                </select>
+                <input type="number" id="cantidad-merma" placeholder="Cantidad descartada" step="any" required>
+                <select id="motivo-merma" required style="padding: 12px; border: 1px solid var(--border); border-radius: 10px; flex: 1.5; min-width: 150px; background-color: #f8fafc;">
+                    <option value="Vencimiento">Vencimiento</option>
+                    <option value="Deterioro / Mal estado">Deterioro / Mal estado</option>
+                    <option value="Error de Cocina / Quemado">Error de Cocina / Quemado</option>
+                    <option value="Rotura de empaque">Rotura de empaque</option>
+                </select>
+                <button type="submit" style="background-color: var(--danger);">Registrar Merma</button>
+            </form>
+
+            <h3 style="margin-top: 20px; font-size: 1.05rem; color: var(--primary);">Historial de Pérdidas Registradas:</h3>
+            <table id="tabla-mermas" style="margin-top: 10px;">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Insumo</th>
+                        <th>Cantidad</th>
+                        <th>Motivo</th>
+                        <th>Pérdida ($)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div id="total-perdida-mermas" style="margin-top: 12px; font-weight: bold; color: var(--danger); text-align: right;"></div>
+        </section>
+        <section class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                <h2 style="margin: 0; border: none; padding: 0;">1. Inventario y Códigos Internos</h2>
+                <button type="button" onclick="imprimirPlanillaInventario()" style="background-color: #34495e; padding: 8px 14px; font-size: 0.9rem;">🖨️ Imprimir Planilla de Conteo Físico</button>
+            </div>
+
+            <form id="form-ingrediente">
+                <input type="text" id="codigo-ingrediente" placeholder="Código (ej. INS-005)">
+                <input type="text" id="nombre-ingrediente" placeholder="Nombre Insumo" required>
+                <input type="text" id="unidad-ingrediente" placeholder="Unidad (kg, g, uds)" required>
+                <input type="number" id="stock-ingrediente" placeholder="Stock Inicial" step="any" required>
+                <input type="number" id="precio-ingrediente" placeholder="Precio ($/Unidad)" step="any" required>
+                <button type="submit">+ Agregar Insumo</button>
+            </form>
+            <table id="tabla-ingredientes">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Insumo</th>
+                        <th>Stock Teórico (Sistema)</th>
+                        <th>Precio/Unidad</th>
+                        <th>Valor Total</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+        <section class="card">
+           
+        </section>
+
+        <!-- SECCIÓN 2: CREAR Y EDITAR PLATOS (ESCANDALLO) -->
+        <section class="card">
+            <h2>2. Menú, Recetas (Escandallo) y Edición</h2>
+            <form id="form-plato">
+                <input type="hidden" id="plato-edit-id"> <!-- Campo oculto para saber si estamos editando -->
+                <input type="text" id="nombre-plato" placeholder="Nombre del Plato (ej. Hamburguesa)" required>
+                <input type="number" id="precio-venta-plato" placeholder="Precio de Venta ($)" step="any" required>
+                
+                <div id="ingredientes-receta-container">
+                    <h4>Desglose de Ingredientes por Porción:</h4>
+                    <div id="lista-ingredientes-receta"></div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button type="submit" id="btn-guardar-plato" style="background-color: #2e7d32;">Guardar Plato en Menú</button>
+                    <button type="button" id="btn-cancelar-edicion" onclick="cancelarEdicionPlato()" style="background-color: #7f8c8d; display: none;">Cancelar Edición</button>
+                </div>
+            </form>
+
+            <h3 style="margin-top: 25px; font-size: 1.1rem; color: #1e3c72;">Platos Guardados en el Menú:</h3>
+            <div id="lista-platos-guardados" style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+                <!-- Los platos guardados aparecerán aquí -->
+            </div>
+        </section>
+
+        <!-- SECCIÓN 3: PUNTO DE VENTA (POS) -->
+        <section class="card">
+            <h2>3. Punto de Venta (Simulador de Caja)</h2>
+            <p>Al hacer clic en un plato se descuentan los ingredientes exactos del inventario:</p>
+            <div id="botones-menu"></div>
+        </section>
+        <!-- MÓDULO NUEVO: IMPORTAR VENTAS DE OTROS POS -->
+        <section class="card" style="background: #fdfefe; border: 2px dashed #16a085;">
+            <h2>📊 Importar Ventas de Sistema POS (Fudo / MaxiRest / Excel)</h2>
+            <p>Sube el archivo CSV de ventas de tu caja diaria para descontar automáticamente los ingredientes del inventario:</p>
+            
+            <div class="ocr-box" style="margin-top: 10px;">
+                <input type="file" id="ventas-csv-file" accept=".csv,.txt">
+                <button type="button" onclick="simularCargaVentasCSV()" style="background-color: #16a085;">⚡ Simular Carga de Reporte Diario</button>
+            </div>
+            
+            <div id="status-ventas" style="margin-top: 10px; font-size: 0.9rem; font-weight: bold; color: #16a085;"></div>
+        </section>
+        <!-- MÓDULO: PROYECCIÓN Y SUGERENCIA DE COMPRAS INTELIGENTE -->
+        <section class="card" style="border-left: 5px solid #f59e0b;">
+            <h2>🛒 Sugerencia de Compras e Inventario Inteligente</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">
+                Cálculo de pedidos sugeridos según el promedio de ventas previas y la proyección de demanda:
+            </p>
+
+            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid var(--border);">
+                <label style="font-weight: 600; color: var(--primary);">📅 Proyección para los próximos días:</label>
+                <select id="select-factor-demanda" onchange="renderizarAlertasCompras()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: white; font-weight: 600;">
+                    <option value="1">Días Normales (Demanda Estándar 100%)</option>
+                    <option value="1.3">Fin de Semana (Demanda +30%)</option>
+                    <option value="1.5">Feriado / Fin de Semana Largo (Demanda +50%)</option>
+                    <option value="2">Evento Especial / Festividad (Demanda x2)</option>
+                </select>
+            </div>
+
+            <table id="tabla-alertas-compras">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Insumo</th>
+                        <th>Stock Actual</th>
+                        <th>Consumo Proyectado</th>
+                        <th>Pedido Sugerido</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button type="button" onclick="copiarPedidoWhatsApp()" style="background-color: #25d366;">💬 Copiar Pedido para Proveedor (WhatsApp)</button>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
